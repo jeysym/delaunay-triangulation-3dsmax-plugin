@@ -15,6 +15,10 @@
 #include "DelaunayUtilityPlugin.h"
 
 #define DelaunayUtilityPlugin_CLASS_ID	Class_ID(0x73620695, 0x651f0af4)
+#define DelaunayUtilityPlugin_FP_INTERFACE_ID Interface_ID(0x789b0621, 0xa5ef0346)
+
+class DelaunayUtilityPlugin;
+
 
 
 class DelaunayUtilityPlugin : public UtilityObj 
@@ -34,9 +38,19 @@ public:
 	virtual void Destroy(HWND hWnd);
 	
 	// Singleton access
-	static DelaunayUtilityPlugin* GetInstance() { 
-		static DelaunayUtilityPlugin theDelaunayUtilityPlugin;
-		return &theDelaunayUtilityPlugin; 
+	static DelaunayUtilityPlugin* GetInstance();
+
+	Mesh* triangulate(Tab<Point3*>* vertices) {
+		Mesh* mesh = new Mesh();
+		Tab<Point3*> & verticesTab = *vertices;
+		
+		int vertexCount = verticesTab.Count();
+		mesh->setNumVerts(vertexCount);
+		for (int i = 0; i < vertexCount; ++i) {
+			mesh->setVert(i, *verticesTab[i] + Point3(5.0f, 0.0f, 0.0f));
+		}
+
+		return mesh;
 	}
 
 private:
@@ -46,7 +60,6 @@ private:
 	HWND   hPanel;
 	IUtil* iu;
 };
-
 
 class DelaunayUtilityPluginClassDesc : public ClassDesc2 
 {
@@ -64,11 +77,40 @@ public:
 
 };
 
+class DelaunayFpImplementation : public DelaunayFpInterface {
+	DECLARE_DESCRIPTOR(DelaunayFpImplementation)
+	BEGIN_FUNCTION_MAP
+		FN_1((int)DelaunayFpFunctions::DELAUNAY, TYPE_MESH, delaunay, TYPE_POINT3_TAB)
+	END_FUNCTION_MAP
+
+	virtual Mesh* delaunay(Tab<Point3*>* vertices) {
+		return DelaunayUtilityPlugin::GetInstance()->triangulate(vertices);
+	}
+};
+
+static DelaunayUtilityPlugin theDelaunayUtilityPlugin;
+static DelaunayUtilityPluginClassDesc delaunayUtilityPluginDesc;
+static DelaunayFpImplementation delaunayFpImplementationDesc(
+	// INTERFACE ID | INTERNAL NAME | DESCRIPTION | CLASS DESCRIPTOR | FLAGS
+	DelaunayUtilityPlugin_FP_INTERFACE_ID, _T("Algorithms"), IDS_FPI_ALGO, &delaunayUtilityPluginDesc, 0,
+	// Here starts the var-args magic.
+	// FUNCTION ID | INTERNAL NAME | LOCALIZABLE DESCRIPTION | RETURN TYPE | FLAGS | PARAMETER COUNT
+	// for each parameter: INTERNAL PARAMETER NAME | LOCALIZABLE DESCRIPTION | TYPE
+	(int)DelaunayFpFunctions::DELAUNAY, _T("delaunay"), IDS_FN_DELAUNAY, TYPE_MESH, 0, 1,
+	//_T("delaunayObject"), IDS_FNP_DELAUNAY, TYPE_OBJECT,
+	_T("vertices"), IDS_FNP_VERTICES, TYPE_POINT3_TAB,
+	p_end
+);
 
 ClassDesc2* GetDelaunayUtilityPluginDesc() { 
-	static DelaunayUtilityPluginClassDesc DelaunayUtilityPluginDesc;
-	return &DelaunayUtilityPluginDesc; 
+	return &delaunayUtilityPluginDesc; 
 }
+
+DelaunayUtilityPlugin* DelaunayUtilityPlugin::GetInstance() {
+	return &theDelaunayUtilityPlugin;
+}
+
+
 
 
 
