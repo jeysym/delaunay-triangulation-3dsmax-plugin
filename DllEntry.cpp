@@ -1,3 +1,6 @@
+/// The main source file of the DLL. Contains the DllMain function and some 
+/// other funcitons that are exported by the DLL to 3ds Max.
+/// \author Jan Bryda
 #include "stdafx.h"
 
 #include "DelaunayUtilityPlugin.h"
@@ -12,7 +15,6 @@ int controlsInit = FALSE;
 // like rendering.  Therefore developers need to be careful what they
 // do inside this function.  In the code below, note how after the DLL is
 // loaded the first time only a few statements are executed.
-
 BOOL WINAPI DllMain(HINSTANCE hinstDLL,ULONG fdwReason,LPVOID /*lpvReserved*/)
 {
 	if( fdwReason == DLL_PROCESS_ATTACH )
@@ -34,7 +36,6 @@ __declspec( dllexport ) const TCHAR* LibDescription()
 }
 
 // This function returns the number of plug-in classes this DLL
-//TODO: Must change this number when adding a new class
 __declspec( dllexport ) int LibNumberClasses()
 {
 	return 1;
@@ -64,7 +65,7 @@ __declspec( dllexport ) ULONG LibVersion()
 // on your DLL, and send you a message.
 __declspec( dllexport ) int LibInitialize(void)
 {
-	#pragma message(TODO("Perform initialization here."))
+	// no need for initialization here
 	return TRUE;
 }
 
@@ -73,7 +74,7 @@ __declspec( dllexport ) int LibInitialize(void)
 // The system doesn't pay attention to a return value.
 __declspec( dllexport ) int LibShutdown(void)
 {
-	#pragma message(TODO("Perform un-initialization here."))
+	// no need to un-initialization here
 	return TRUE;
 }
 
@@ -85,4 +86,3 @@ TCHAR *GetString(int id)
 		return LoadString(hInstance, id, buf, _countof(buf)) ? buf : NULL;
 	return NULL;
 }
-

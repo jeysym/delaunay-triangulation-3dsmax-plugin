@@ -4,6 +4,11 @@
 #define DelaunayUtilityPlugin_CLASS_ID	Class_ID(0x73620695, 0x651f0af4)
 #define DelaunayUtilityPlugin_FP_INTERFACE_ID Interface_ID(0x789b0621, 0xa5ef0346)
 
+using std::vector;
+using Eigen::Vector3d;
+using std::unique_ptr;
+using std::make_unique;
+
 class DelaunayUtilityPlugin;
 
 
@@ -28,16 +33,19 @@ public:
 	static DelaunayUtilityPlugin* GetInstance();
 
 	Mesh* triangulate(Tab<Point3*>* vertices) {
-		Mesh* mesh = new Mesh();
 		Tab<Point3*> & verticesTab = *vertices;
-		
-		int vertexCount = verticesTab.Count();
-		mesh->setNumVerts(vertexCount);
-		for (int i = 0; i < vertexCount; ++i) {
-			mesh->setVert(i, *verticesTab[i] + Point3(5.0f, 0.0f, 0.0f));
+		size_t vertexCount = (size_t)verticesTab.Count();
+
+		vector<Vector3d> myVertices;
+		myVertices.reserve(vertexCount);
+		for (size_t i = 0; i < vertexCount; ++i) {
+			Point3 & vertex = *verticesTab[i];
+			myVertices.push_back(Vector3d(vertex.x, vertex.y, vertex.z));
 		}
 
-		return mesh;
+		unique_ptr<IDelaunay3D> algorithm =  make_unique<BowyerWatson3D>();
+		TetraMesh result = algorithm->invoke(myVertices);
+		return result.convertTo3dsMaxMesh();
 	}
 
 private:

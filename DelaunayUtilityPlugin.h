@@ -1,11 +1,8 @@
 #pragma once
 #include "3dsmaxsdk_preinclude.h"
 #include "resource.h"
+#include "Delaunay3D.h"
 
-//SIMPLE TYPE
-
-
-#include <utilapi.h>
 
 enum class DelaunayFpFunctions {
 	DELAUNAY
