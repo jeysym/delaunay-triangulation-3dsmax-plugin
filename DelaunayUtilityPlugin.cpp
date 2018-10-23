@@ -11,7 +11,19 @@ using std::make_unique;
 
 class DelaunayUtilityPlugin;
 
+vector<Vector3d> makeVector(Tab<Point3*>* vertices) {
+	vector<Vector3d> result;
+	Tab<Point3*> & verticesTab = *vertices;
+	size_t vertexCount = (size_t)verticesTab.Count();
 
+	result.reserve(vertexCount);
+	for (size_t i = 0; i < vertexCount; ++i) {
+		Point3 & vertex = *verticesTab[i];
+		result.push_back(Vector3d(vertex.x, vertex.y, vertex.z));
+	}
+
+	return result;
+}
 
 class DelaunayUtilityPlugin : public UtilityObj 
 {
@@ -32,20 +44,14 @@ public:
 	// Singleton access
 	static DelaunayUtilityPlugin* GetInstance();
 
-	Mesh* triangulate(Tab<Point3*>* vertices) {
-		Tab<Point3*> & verticesTab = *vertices;
-		size_t vertexCount = (size_t)verticesTab.Count();
+	Mesh* triangulate2D(Tab<Point3*>* vertices) {
+		unique_ptr<delaunay::IDelaunay2D> algorithm = make_unique<delaunay::BowyerWatson2D>();
+		return algorithm->invoke(makeVector(vertices));
+	}
 
-		vector<Vector3d> myVertices;
-		myVertices.reserve(vertexCount);
-		for (size_t i = 0; i < vertexCount; ++i) {
-			Point3 & vertex = *verticesTab[i];
-			myVertices.push_back(Vector3d(vertex.x, vertex.y, vertex.z));
-		}
-
-		unique_ptr<IDelaunay3D> algorithm =  make_unique<BowyerWatson3D>();
-		TetraMesh result = algorithm->invoke(myVertices);
-		return result.convertTo3dsMaxMesh();
+	Mesh* triangulate3D(Tab<Point3*>* vertices) {
+		unique_ptr<delaunay::IDelaunay3D> algorithm =  make_unique<delaunay::BowyerWatson3D>();
+		return algorithm->invoke(makeVector(vertices));
 	}
 
 private:
@@ -75,11 +81,16 @@ public:
 class DelaunayFpImplementation : public DelaunayFpInterface {
 	DECLARE_DESCRIPTOR(DelaunayFpImplementation)
 	BEGIN_FUNCTION_MAP
-		FN_1((int)DelaunayFpFunctions::DELAUNAY, TYPE_MESH, delaunay, TYPE_POINT3_TAB)
+		FN_1((int)DelaunayFpFunctions::DELAUNAY2D, TYPE_MESH, delaunay2D, TYPE_POINT3_TAB)
+		FN_1((int)DelaunayFpFunctions::DELAUNAY3D, TYPE_MESH, delaunay3D, TYPE_POINT3_TAB)
 	END_FUNCTION_MAP
 
-	virtual Mesh* delaunay(Tab<Point3*>* vertices) {
-		return DelaunayUtilityPlugin::GetInstance()->triangulate(vertices);
+	virtual Mesh* delaunay2D(Tab<Point3*>* vertices) {
+		return DelaunayUtilityPlugin::GetInstance()->triangulate2D(vertices);
+	}
+
+	virtual Mesh* delaunay3D(Tab<Point3*>* vertices) {
+		return DelaunayUtilityPlugin::GetInstance()->triangulate3D(vertices);
 	}
 };
 
@@ -91,8 +102,10 @@ static DelaunayFpImplementation delaunayFpImplementationDesc(
 	// Here starts the var-args magic.
 	// FUNCTION ID | INTERNAL NAME | LOCALIZABLE DESCRIPTION | RETURN TYPE | FLAGS | PARAMETER COUNT
 	// for each parameter: INTERNAL PARAMETER NAME | LOCALIZABLE DESCRIPTION | TYPE
-	(int)DelaunayFpFunctions::DELAUNAY, _T("delaunay"), IDS_FN_DELAUNAY, TYPE_MESH, 0, 1,
-	//_T("delaunayObject"), IDS_FNP_DELAUNAY, TYPE_OBJECT,
+	(int)DelaunayFpFunctions::DELAUNAY2D, _T("delaunay2D"), IDS_FN_DELAUNAY2D, TYPE_MESH, 0, 1,
+	_T("vertices"), IDS_FNP_VERTICES, TYPE_POINT3_TAB,
+
+	(int)DelaunayFpFunctions::DELAUNAY3D, _T("delaunay3D"), IDS_FN_DELAUNAY3D, TYPE_MESH, 0, 1,
 	_T("vertices"), IDS_FNP_VERTICES, TYPE_POINT3_TAB,
 	p_end
 );

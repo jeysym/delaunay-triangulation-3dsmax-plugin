@@ -51,6 +51,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Delaunay2D.cpp" />
     <ClCompile Include="Delaunay3D.cpp" />
     <ClCompile Include="DelaunayUtilityPlugin.cpp" />
     <ClCompile Include="DllEntry.cpp" />
@@ -63,6 +64,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="3dsmaxsdk_preinclude.h" />
+    <ClInclude Include="Delaunay2D.h" />
     <ClInclude Include="Delaunay3D.h" />
     <ClInclude Include="DelaunayUtilityPlugin.h" />
     <ClInclude Include="resource.h" />

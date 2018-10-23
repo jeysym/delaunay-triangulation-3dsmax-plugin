@@ -94,9 +94,9 @@ BEGIN
     IDS_PARAMS              "Parameters"
     IDS_SPIN                "Spin"
     IDS_FPI_ALGO            "Algorithms"
-    IDS_FN_DELAUNAY         "Delaunay triangulation"
-    IDS_FNP_DELAUNAY        "Delaunay utility plugin object"
+    IDS_FN_DELAUNAY2D       "2D Delaunay triangulation function"
     IDS_FNP_VERTICES        "Set of vertices"
+    IDS_FN_DELAUNAY3D       "3D Delaunay triangulation function"
 END
 
 #endif    // English (United States) resources

@@ -30,6 +30,9 @@
     <ClCompile Include="TetraMesh.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Delaunay2D.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="DelaunayUtilityPlugin.def">
@@ -54,6 +57,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="TetraMesh.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Delaunay2D.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

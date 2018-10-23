@@ -8,9 +8,10 @@
 #define IDS_PARAMS                      4
 #define IDS_SPIN                        5
 #define IDS_FPI_ALGO                    6
-#define IDS_FN_DELAUNAY                 7
+#define IDS_FN_DELAUNAY2D               7
 #define IDS_FNP_DELAUNAY                8
 #define IDS_FNP_VERTICES                9
+#define IDS_FN_DELAUNAY3D               10
 #define IDD_PANEL                       101
 #define IDC_CLOSEBUTTON                 1000
 #define IDC_DOSTUFF                     1000
