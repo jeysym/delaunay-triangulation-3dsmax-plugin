@@ -1,13 +1,76 @@
 #include "stdafx.h"
 #include "Delaunay2D.h"
 
+using Eigen::Vector3d;
+using Eigen::Vector2d;
+using Eigen::Matrix2d;
+using std::vector;
+
+#define UNUSED(x) 
+
 namespace delaunay {
 
-	using Eigen::Vector3d;
-	using Eigen::Vector2d;
-	using Eigen::Matrix2d;
-	using std::vector;
+	// =============================================================================
+	// DECLARATIONS
+	// =============================================================================
 
+	enum class KnownVertices : size_t {
+		BBOX_LB = 0,		///< Bounding box left-bottom vertex.
+		BBOX_RB,			///< Bounding box right-bottom vertex.
+		BBOX_RT,			///< Bounding box right-top vertex.
+		BBOX_LT,			///< Bounding box left-top vertex.
+		COUNT					///< Signalizes how many known vertices there are.
+	};
+
+	// =============================================================================
+	// IMPLEMENTATION
+	// =============================================================================
+
+	// OVERLOADED OPERATORS
+	// ====================
+
+	inline bool operator==(const BowyerWatson2D::Edge & lhs, const BowyerWatson2D::Edge & rhs) {
+		return (lhs.m_v0 == rhs.m_v0) && (lhs.m_v1 == rhs.m_v1);
+	}
+
+	inline bool operator!=(const BowyerWatson2D::Edge & lhs, const BowyerWatson2D::Edge & rhs) {
+		return !(lhs == rhs);
+	}
+
+	inline bool operator<(const BowyerWatson2D::Edge & lhs, const BowyerWatson2D::Edge & rhs) {
+		if (lhs.m_v0 < rhs.m_v0)
+			return true;
+
+		if (lhs.m_v0 == rhs.m_v0)
+			return (lhs.m_v1 < rhs.m_v1);
+
+		return false;
+	}
+
+	// HELPER FUNCTIONS
+	// ================
+
+	template<typename I, typename F>
+	void for_each_nonrepeating(I begin, I end, F func) {
+		auto it = begin;
+		while (it != end) {
+			auto next = it + 1;
+
+			if (next == end) {
+				func(*it);
+				return;
+			}
+			else if (*it != *next) {
+				func(*it);
+				++it;
+			}
+			else {
+				while (*it == *next)
+					++it;
+			}
+		}
+	}
+	
 	inline static double square(double value) {
 		return value * value;
 	}
@@ -24,53 +87,93 @@ namespace delaunay {
 		return v0.x() < v1.x();
 	}
 
+	inline static Vector2d toVector2d(const Vector3d & vec) {
+		return Vector2d(vec.x(), vec.y());
+	}
+
 	inline static Point3 toPoint3(const Vector3d & vec) {
 		return Point3(vec.x(), vec.y(), vec.z());
 	}
 
-	//struct Edge {
-	//	size_t v0, v1;
-	//
-	//	Edge(size_t v0, size_t v1) : v0(v0), v1(v1) {
-	//		if (v1 < v0)
-	//			std::swap(this->v0, this->v1);
-	//	}
-	//};
-	//
-	//struct Triangle {
-	//	size_t v0, v1, v2;
-	//	Vector3d circumCenter;
-	//	double circumRadiusSquared;
-	//	bool relevant = true;
-	//
-	//	Triangle(const vector<Vector3d> & vertices, size_t v0, size_t v1, size_t v2)
-	//		: v0(v0), v1(v1), v2(v2) {
-	//		// TODO : compute the circumcenter and radius here.
-	//	}
-	//
-	//	bool containsInCircumcircle(Vector3d vertex) {
-	//		if (relevant == false)
-	//			return false;
-	//
-	//		double difference = circumRadiusSquared - square(vertex.x());
-	//		if (difference < 0.0) {
-	//			relevant = false;
-	//			return false;
-	//		}
-	//
-	//		difference -= square(vertex.y());
-	//		if (difference < 0.0) {
-	//			return false;
-	//		} 
-	//		else {
-	//			return true;
-	//		}
-	//	}
-	//};
+	// BOWYER WATSON EDGE IMPLEMENTATION
+	// =================================
 
-	vector<Triangle> makeBoundingTriangles(vector<Vector3d> & vertices) {
-		vector<Triangle> result;
+	BowyerWatson2D::Edge::Edge(BowyerWatson2D & UNUSED(ctx), size_t v0, size_t v1)
+		: m_v0(v0), m_v1(v1)
+	{
+		if (m_v0 > m_v1)
+			std::swap(m_v0, m_v1);
+	}
 
+	BowyerWatson2D::Triangle BowyerWatson2D::Edge::formTriangle(BowyerWatson2D & ctx, size_t vertex)
+	{
+		return Triangle(ctx, m_v0, m_v1, vertex);
+	}
+
+	// BOWYER WATSON TRIANGLE IMPLEMENTATION
+	// =====================================
+
+	BowyerWatson2D::Triangle::Triangle(BowyerWatson2D & ctx, size_t v0, size_t v1, size_t v2)
+		: m_v0(v0), m_v1(v1), m_v2(v2)
+	{
+		const Vector2d vec0 = toVector2d(ctx.m_vertices[v0]);
+		const Vector2d vec1 = toVector2d(ctx.m_vertices[v1]);
+		const Vector2d vec2 = toVector2d(ctx.m_vertices[v2]);
+
+		Matrix2d matrix;
+		matrix <<
+			2.0 * (vec0 - vec1),
+			2.0 * (vec0 - vec2);
+		matrix.transposeInPlace();
+
+		Vector2d rhs;
+		rhs <<
+			squareSum(vec0) - squareSum(vec1), squareSum(vec0) - squareSum(vec2);
+
+		Vector2d circumCenter = matrix.fullPivLu().solve(rhs);
+		Vector2d x = vec0 - circumCenter;
+		double circumRadiusSquared = squareSum(x);
+
+		m_circumCenter = circumCenter;
+		m_circumRadiusSquared = circumRadiusSquared;
+	}
+
+	vector<BowyerWatson2D::Edge> BowyerWatson2D::Triangle::getEdges(BowyerWatson2D & ctx)
+	{
+		vector<BowyerWatson2D::Edge> result;
+		result.push_back(Edge(ctx, m_v0, m_v1));
+		result.push_back(Edge(ctx, m_v1, m_v2));
+		result.push_back(Edge(ctx, m_v2, m_v0));
+		return result;
+	}
+
+	bool BowyerWatson2D::Triangle::containsInCircumCircle(const Eigen::Vector2d & point)
+	{
+		double d = m_circumRadiusSquared;
+		d -= square(point.x() - m_circumCenter.x());
+		d -= square(point.y() - m_circumCenter.y());
+
+		if (d > 0.0) {
+			return true;
+		}
+
+		return false;
+	}
+
+	bool BowyerWatson2D::Triangle::isBounding(BowyerWatson2D & UNUSED(ctx))
+	{
+		bool v0_bounding = m_v0 < size_t(KnownVertices::COUNT);
+		bool v1_bounding = m_v1 < size_t(KnownVertices::COUNT);
+		bool v2_bounding = m_v2 < size_t(KnownVertices::COUNT);
+		
+		if (v0_bounding || v1_bounding || v2_bounding) 
+			return true;
+		else
+			return false;
+	}
+
+	void BowyerWatson2D::makeBoundingTriangles(const vertexCollection & vertices)
+	{
 		double xMin = std::numeric_limits<double>::max();
 		double xMax = std::numeric_limits<double>::lowest();
 		double yMin = std::numeric_limits<double>::max();
@@ -86,34 +189,76 @@ namespace delaunay {
 
 		double dx = xMax - xMin;
 		double dy = yMax - yMin;
-		xMin -= dx;
-		xMax += dx;
-		yMin -= dy;
-		yMax += dy;
+		double maxD = std::max(dx, dy);
 
-		size_t i = vertices.size();
-		Vector3d A(xMin, yMin, 0.0);
-		Vector3d B(xMax, yMin, 0.0);
-		Vector3d C(xMax, yMax, 0.0);
-		Vector3d D(xMin, yMax, 0.0);
+		double left = xMin - maxD;
+		double right = xMax + maxD;
+		double top = yMax + maxD;
+		double bottom = yMin - maxD;
 
-		size_t iA = i;
-		size_t iB = i + 1;
-		size_t iC = i + 2;
-		size_t iD = i + 3;
+		Vector3d lb(left, bottom, 0.0);
+		Vector3d rb(right, bottom, 0.0);
+		Vector3d rt(right, top, 0.0);
+		Vector3d lt(left, top, 0.0);
 
-		vertices.push_back(A);
-		vertices.push_back(B);
-		vertices.push_back(C);
-		vertices.push_back(D);
+		size_t lbIndex = size_t(KnownVertices::BBOX_LB);
+		size_t rbIndex = size_t(KnownVertices::BBOX_RB);
+		size_t rtIndex = size_t(KnownVertices::BBOX_RT);
+		size_t ltIndex = size_t(KnownVertices::BBOX_LT);
 
-		Triangle t0(vertices, iA, iB, iC);
-		Triangle t1(vertices, iA, iC, iD);
-		t0.isBounding = true;
-		t1.isBounding = true;
+		m_vertices.resize(size_t(KnownVertices::COUNT));
+		m_vertices[lbIndex] = lb;
+		m_vertices[rbIndex] = rb;
+		m_vertices[rtIndex] = rt;
+		m_vertices[ltIndex] = lt;
 
-		result.push_back(t0);
-		result.push_back(t1);
+		m_currentTriangulation.push_back(Triangle(*this, lbIndex, rbIndex, rtIndex));
+		m_currentTriangulation.push_back(Triangle(*this, lbIndex, rtIndex, ltIndex));
+	}
+
+	Mesh* BowyerWatson2D::convertTriangulationIntoMesh()
+	{
+		// CONSTRUCTION OF THE 3DS MAX MESH
+		// ================================
+
+		size_t boundingVerticesCount = size_t(KnownVertices::COUNT);
+		size_t totalVerticesCount = m_vertices.size();
+		size_t verticesCount = totalVerticesCount - boundingVerticesCount;
+
+		size_t triangleCount = std::count_if(
+			m_currentTriangulation.begin(),
+			m_currentTriangulation.end(),
+			[this](Triangle & triangle) { return (triangle.isBounding(*this) == false); }
+		);
+
+		Mesh* result = new Mesh;
+		result->setNumVerts(int(verticesCount));
+		result->setNumFaces(int(2 * triangleCount));
+
+		for (size_t iVertex = 0; iVertex < verticesCount; ++iVertex) {
+			Vector3d & vertex = m_vertices[iVertex + boundingVerticesCount];
+			result->setVert(int(iVertex), toPoint3(vertex));
+		}
+
+		size_t iFace = 0;
+		for (Triangle & triangle : m_currentTriangulation) {
+			if (triangle.isBounding(*this))
+				continue;
+
+			DWORD index0 = DWORD(triangle.m_v0 - boundingVerticesCount);
+			DWORD index1 = DWORD(triangle.m_v1 - boundingVerticesCount);
+			DWORD index2 = DWORD(triangle.m_v2 - boundingVerticesCount);
+
+			result->faces[iFace].v[0] = index0;
+			result->faces[iFace].v[1] = index1;
+			result->faces[iFace].v[2] = index2;
+
+			result->faces[triangleCount + iFace].v[0] = index2;
+			result->faces[triangleCount + iFace].v[1] = index1;
+			result->faces[triangleCount + iFace].v[2] = index0;
+
+			++iFace;
+		}
 
 		return result;
 	}
@@ -123,140 +268,63 @@ namespace delaunay {
 		// PREPARATION PHASE
 		// =================
 
-		vector<Vector3d> vertices = inputVertices;
-		// sort the input vertices by x-coordinate
-		std::sort(vertices.begin(), vertices.end(), compareVectorByXCoord);
 		// calculate the initial triangulation which bounds the input vertices
-		vector<Triangle> triangulation = makeBoundingTriangles(vertices);
+		makeBoundingTriangles(inputVertices);
+
+		// insert the data vertices
+		m_vertices.insert(m_vertices.end(), inputVertices.begin(), inputVertices.end());
+
+		// sort the input data vertices by x-coordinate
+		size_t firstVertexIndex = size_t(KnownVertices::COUNT);
+		auto beginIt = m_vertices.begin() + firstVertexIndex;
+		std::sort(beginIt, m_vertices.end(), compareVectorByXCoord);
 
 
 		// INSERTING THE VERTICES
 		// ======================
 
-		size_t vertexCount = vertices.size() - 4;
-		for (size_t iVertex = 0; iVertex < vertexCount; ++iVertex) {
-			Vector3d & vertex = vertices[iVertex];
+		size_t totalVertexCount = m_vertices.size();
+		for (size_t iVertex = firstVertexIndex; iVertex < totalVertexCount; ++iVertex) {
+			Vector3d & vertex = m_vertices[iVertex];
+			Vector2d vertex2D = toVector2d(vertex);
 
 			vector<Edge> badEdges;
 
-			size_t triangleCount = triangulation.size();
+			size_t triangleCount = m_currentTriangulation.size();
 			for (size_t iTriangle = 0; iTriangle < triangleCount; ++iTriangle) {
-				Triangle & triangle = triangulation[iTriangle];
+				Triangle & triangle = m_currentTriangulation[iTriangle];
 
-				if (triangle.containsInCircumCircle(vertex)) {
+				if (triangle.containsInCircumCircle(vertex2D)) {
 					// triangle is bad, it must be cut out
-					triangle.isBad = true;
-					auto triangleEdges = triangle.getEdges(vertices);
+					triangle.m_isBad = true;
+					auto triangleEdges = triangle.getEdges(*this);
 					badEdges.insert(badEdges.end(), triangleEdges.begin(), triangleEdges.end());
 				}
 			}
 
-			triangulation.erase(std::remove_if(triangulation.begin(), triangulation.end(), 
-				[](Triangle t) { return t.isBad; }
-				), triangulation.end());
+			// simply remove all the bad triangles
+			m_currentTriangulation.erase(
+				std::remove_if(
+					m_currentTriangulation.begin(),
+					m_currentTriangulation.end(),
+					[this](const Triangle & t) { return t.m_isBad; }
+				), 
+				m_currentTriangulation.end()
+			);
 
+			// construct the polygon that forms the boundary of the bad triangles
+			// and create new triangles from this polygon
 			std::sort(badEdges.begin(), badEdges.end());
-			for_each_nonrepeating(badEdges.begin(), badEdges.end(),
-				[&](Edge & edge) {
-				triangulation.push_back(edge.connectWithVertex(vertices, iVertex));
-			});
-
+			for_each_nonrepeating(
+				badEdges.begin(), 
+				badEdges.end(),
+				[this, iVertex](Edge & edge) {
+					m_currentTriangulation.push_back(edge.formTriangle(*this, iVertex));
+				}
+			);
 		}
 
-
-		// CONSTRUCTION OF THE 3DS MAX MESH
-		// ================================
-
-		size_t triangleCount = std::count_if(
-			triangulation.begin(),
-			triangulation.end(),
-			[](Triangle & triangle) { return triangle.isBounding == false; }
-		);
-
-		Mesh* result = new Mesh;
-		result->setNumVerts(vertexCount);
-		result->setNumFaces(triangleCount);
-
-		for (size_t iVertex = 0; iVertex < vertexCount; ++iVertex) {
-			Vector3d & vertex = vertices[iVertex];
-			result->setVert(int(iVertex), toPoint3(vertex));
-		}
-
-		size_t iFace = 0;
-		for (Triangle & triangle : triangulation) {
-			if (triangle.isBounding)
-				continue;
-
-			result->faces[iFace].v[0] = DWORD(triangle.v0);
-			result->faces[iFace].v[1] = DWORD(triangle.v1);
-			result->faces[iFace].v[2] = DWORD(triangle.v2);
-			++iFace;
-		}
-
-		return result;
-	}
-
-	Edge::Edge(const vertexCollection & vertices, size_t v0, size_t v1)
-		: v0(v0), v1(v1)
-	{
-		if (v1 < v0)
-			std::swap(this->v0, this->v1);
-	}
-
-	Triangle Edge::connectWithVertex(const vertexCollection & vertices, size_t v)
-	{
-		return Triangle(vertices, v0, v1, v);
-	}
-
-	Triangle::Triangle(const vertexCollection & vertices, size_t i0, size_t i1, size_t i2)
-		: v0(i0), v1(i1), v2(i2)
-	{
-		const Vector3d & vert0 = vertices[i0];
-		const Vector3d & vert1 = vertices[i1];
-		const Vector3d & vert2 = vertices[i2];
-
-		const Vector2d v0 = { vert0.x(), vert0.y() };
-		const Vector2d v1 = { vert1.x(), vert1.y() };
-		const Vector2d v2 = { vert2.x(), vert2.y() };
-
-		Matrix2d matrix;
-		matrix <<
-			2.0 * (v0 - v1),
-			2.0 * (v0 - v2);
-		matrix.transposeInPlace();
-
-		Vector2d rhs;
-		rhs <<
-			squareSum(v0) - squareSum(v1), squareSum(v0) - squareSum(v2);
-
-		Vector2d sol1 = matrix.fullPivHouseholderQr().solve(rhs);
-		Vector2d sol2 = matrix.fullPivLu().solve(rhs);
-		Vector2d sol3 = matrix.partialPivLu().solve(rhs);
-		circumCenter = sol3;
-		Vector2d x = v0 - circumCenter;
-		circumRadiusSquared = squareSum(x);
-	}
-
-	std::vector<Edge> Triangle::getEdges(const vertexCollection & vertices) const
-	{
-		vector<Edge> result;
-		result.push_back(Edge(vertices, v0, v1));
-		result.push_back(Edge(vertices, v1, v2));
-		result.push_back(Edge(vertices, v2, v0));
-		return result;
-	}
-
-	bool Triangle::containsInCircumCircle(const Vector3d & vertex) const
-	{
-		double d = circumRadiusSquared;
-		d -= square(vertex.x() - circumCenter.x());
-		d -= square(vertex.y() - circumCenter.y());
-
-		if (d > 0.0) {
-			return true;
-		}
-
-		return false;
+		return convertTriangulationIntoMesh();
 	}
 
 }
