@@ -19,8 +19,9 @@ namespace delaunay {
 		BBOX_RB,			///< Bounding box right-bottom vertex.
 		BBOX_RT,			///< Bounding box right-top vertex.
 		BBOX_LT,			///< Bounding box left-top vertex.
-		COUNT					///< Signalizes how many known vertices there are.
+		COUNT				///< Signalizes how many known vertices there are.
 	};
+
 
 	// =============================================================================
 	// IMPLEMENTATION
@@ -28,6 +29,9 @@ namespace delaunay {
 
 	// OVERLOADED OPERATORS
 	// ====================
+
+	// Following operators on Edge struct are needed so that a collection of edges can be sorted,
+	// checked for repeating edges etc.
 
 	inline bool operator==(const BowyerWatson2D::Edge & lhs, const BowyerWatson2D::Edge & rhs) {
 		return (lhs.m_v0 == rhs.m_v0) && (lhs.m_v1 == rhs.m_v1);
@@ -47,9 +51,11 @@ namespace delaunay {
 		return false;
 	}
 
+
 	// HELPER FUNCTIONS
 	// ================
 
+	/// Iterates over a collection and performs a functor for each element that does not repeat.
 	template<typename I, typename F>
 	void for_each_nonrepeating(I begin, I end, F func) {
 		auto it = begin;
@@ -95,6 +101,7 @@ namespace delaunay {
 		return Point3(vec.x(), vec.y(), vec.z());
 	}
 
+
 	// BOWYER WATSON EDGE IMPLEMENTATION
 	// =================================
 
@@ -110,6 +117,7 @@ namespace delaunay {
 		return Triangle(ctx, m_v0, m_v1, vertex);
 	}
 
+
 	// BOWYER WATSON TRIANGLE IMPLEMENTATION
 	// =====================================
 
@@ -119,6 +127,24 @@ namespace delaunay {
 		const Vector2d vec0 = toVector2d(ctx.m_vertices[v0]);
 		const Vector2d vec1 = toVector2d(ctx.m_vertices[v1]);
 		const Vector2d vec2 = toVector2d(ctx.m_vertices[v2]);
+
+		// To find the parameters of the circumscribed cirle of the triangle we solve system of 
+		// two linear equations with two unknowns.
+		// These equations are buit this way: 
+		//		For each point [x,y] on the circle with center [X,Y] and radius R
+		//		(x-X)^2 + (y-Y)^2 = R^2
+		//
+		//		Each triangle vertex forms a quadratic equation with unknowns X, Y, R.
+		//		(x0-X)^2 + (y0-Y)^2 = R^2
+		//		(x1-X)^2 + (y1-Y)^2 = R^2
+		//		(x2-X)^2 + (y2-Y)^2 = R^2
+		//		
+		//		By subtracting the first equation from the other we get rid of the degree-2 power.
+		//		And we get two linear equations.
+		//		X * 2(x0 - x1) + Y * 2(y0 - y1) = (x0^2 + y0^2) - (x1^2 + y1^2)
+		//		X * 2(x0 - x2) + Y * 2(y0 - y2) = (x0^2 + y0^2) - (x2^2 + y2^2)
+		//
+		//		This can be solved by the standard linear algebra methods.
 
 		Matrix2d matrix;
 		matrix <<
@@ -268,13 +294,13 @@ namespace delaunay {
 		// PREPARATION PHASE
 		// =================
 
-		// calculate the initial triangulation which bounds the input vertices
+		// Calculate the initial triangulation which bounds the input vertices.
 		makeBoundingTriangles(inputVertices);
 
-		// insert the data vertices
+		// Insert the input vertices.
 		m_vertices.insert(m_vertices.end(), inputVertices.begin(), inputVertices.end());
 
-		// sort the input data vertices by x-coordinate
+		// Sort the input data vertices by x-coordinate.
 		size_t firstVertexIndex = size_t(KnownVertices::COUNT);
 		auto beginIt = m_vertices.begin() + firstVertexIndex;
 		std::sort(beginIt, m_vertices.end(), compareVectorByXCoord);
