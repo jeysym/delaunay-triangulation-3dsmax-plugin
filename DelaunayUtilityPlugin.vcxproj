@@ -56,7 +56,6 @@
     <ClCompile Include="DelaunayUtilityPlugin.cpp" />
     <ClCompile Include="DllEntry.cpp" />
     <ClCompile Include="stdafx.cpp" />
-    <ClCompile Include="TetraMesh.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="DelaunayUtilityPlugin.def" />
@@ -70,7 +69,6 @@
     <ClInclude Include="DelaunayUtilityPlugin.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="stdafx.h" />
-    <ClInclude Include="TetraMesh.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="DelaunayUtilityPlugin.rc" />
