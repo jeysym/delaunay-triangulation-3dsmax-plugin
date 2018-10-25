@@ -11,20 +11,25 @@ using std::make_unique;
 
 class DelaunayUtilityPlugin;
 
-vector<Vector3d> makeVector(Tab<Point3*>* vertices) {
+/// Extracts the vertices from the Mesh class.
+vector<Vector3d> makeVector(Mesh* mesh) {
 	vector<Vector3d> result;
-	Tab<Point3*> & verticesTab = *vertices;
-	size_t vertexCount = (size_t)verticesTab.Count();
 
+	size_t vertexCount = size_t(mesh->getNumVerts());
 	result.reserve(vertexCount);
 	for (size_t i = 0; i < vertexCount; ++i) {
-		Point3 & vertex = *verticesTab[i];
+		Point3 & vertex = mesh->getVert(int(i));
 		result.push_back(Vector3d(vertex.x, vertex.y, vertex.z));
 	}
 
 	return result;
 }
 
+
+// PLUGIN CLASS
+// ============
+
+/// The Utility plugin class that provides the user with 2D and 3D delaunay triangulation capabilities.
 class DelaunayUtilityPlugin : public UtilityObj 
 {
 public:
@@ -44,14 +49,14 @@ public:
 	// Singleton access
 	static DelaunayUtilityPlugin* GetInstance();
 
-	Mesh* triangulate2D(Tab<Point3*>* vertices) {
+	Mesh* triangulate2D(Mesh* mesh) {
 		unique_ptr<delaunay::IDelaunay2D> algorithm = make_unique<delaunay::BowyerWatson2D>();
-		return algorithm->invoke(makeVector(vertices));
+		return algorithm->invoke(makeVector(mesh));
 	}
 
-	Mesh* triangulate3D(Tab<Point3*>* vertices) {
+	Mesh* triangulate3D(Mesh* mesh) {
 		unique_ptr<delaunay::IDelaunay3D> algorithm =  make_unique<delaunay::BowyerWatson3D>();
-		return algorithm->invoke(makeVector(vertices));
+		return algorithm->invoke(makeVector(mesh));
 	}
 
 private:
@@ -62,6 +67,11 @@ private:
 	IUtil* iu;
 };
 
+
+// CLASS DESCRIPTOR
+// ================
+
+/// A class descriptor for DelaunayUtilityPlugin.
 class DelaunayUtilityPluginClassDesc : public ClassDesc2 
 {
 public:
@@ -74,25 +84,31 @@ public:
 
 	virtual const TCHAR* InternalName() 			{ return _T("DelaunayUtilityPlugin"); }	// returns fixed parsable name (scripter-visible name)
 	virtual HINSTANCE HInstance() 					{ return hInstance; }					// returns owning module handle
-	
-
 };
+
+
+// FP IMPLEMENTATION CLASS
+// =======================
 
 class DelaunayFpImplementation : public DelaunayFpInterface {
 	DECLARE_DESCRIPTOR(DelaunayFpImplementation)
 	BEGIN_FUNCTION_MAP
-		FN_1((int)DelaunayFpFunctions::DELAUNAY2D, TYPE_MESH, delaunay2D, TYPE_POINT3_TAB)
-		FN_1((int)DelaunayFpFunctions::DELAUNAY3D, TYPE_MESH, delaunay3D, TYPE_POINT3_TAB)
+		FN_1((int)DelaunayFpFunctions::DELAUNAY2D, TYPE_MESH, delaunay2D, TYPE_MESH)
+		FN_1((int)DelaunayFpFunctions::DELAUNAY3D, TYPE_MESH, delaunay3D, TYPE_MESH)
 	END_FUNCTION_MAP
 
-	virtual Mesh* delaunay2D(Tab<Point3*>* vertices) {
-		return DelaunayUtilityPlugin::GetInstance()->triangulate2D(vertices);
+	virtual Mesh* delaunay2D(Mesh* mesh) {
+		return DelaunayUtilityPlugin::GetInstance()->triangulate2D(mesh);
 	}
 
-	virtual Mesh* delaunay3D(Tab<Point3*>* vertices) {
-		return DelaunayUtilityPlugin::GetInstance()->triangulate3D(vertices);
+	virtual Mesh* delaunay3D(Mesh* mesh) {
+		return DelaunayUtilityPlugin::GetInstance()->triangulate3D(mesh);
 	}
 };
+
+
+// STATIC INSTANCES
+// ================
 
 static DelaunayUtilityPlugin theDelaunayUtilityPlugin;
 static DelaunayUtilityPluginClassDesc delaunayUtilityPluginDesc;
@@ -103,10 +119,10 @@ static DelaunayFpImplementation delaunayFpImplementationDesc(
 	// FUNCTION ID | INTERNAL NAME | LOCALIZABLE DESCRIPTION | RETURN TYPE | FLAGS | PARAMETER COUNT
 	// for each parameter: INTERNAL PARAMETER NAME | LOCALIZABLE DESCRIPTION | TYPE
 	(int)DelaunayFpFunctions::DELAUNAY2D, _T("delaunay2D"), IDS_FN_DELAUNAY2D, TYPE_MESH, 0, 1,
-	_T("vertices"), IDS_FNP_VERTICES, TYPE_POINT3_TAB,
+	_T("mesh"), IDS_FNP_VERTICES, TYPE_MESH,
 
 	(int)DelaunayFpFunctions::DELAUNAY3D, _T("delaunay3D"), IDS_FN_DELAUNAY3D, TYPE_MESH, 0, 1,
-	_T("vertices"), IDS_FNP_VERTICES, TYPE_POINT3_TAB,
+	_T("mesh"), IDS_FNP_VERTICES, TYPE_MESH,
 	p_end
 );
 
@@ -119,38 +135,32 @@ DelaunayUtilityPlugin* DelaunayUtilityPlugin::GetInstance() {
 }
 
 
+// PLUGIN FUNCTIONS IMPLEMENTATION
+// ===============================
 
-
-
-
-//--- DelaunayUtilityPlugin -------------------------------------------------------
 DelaunayUtilityPlugin::DelaunayUtilityPlugin()
 	: hPanel(nullptr)
 	, iu(nullptr)
-{
-	
-}
+{ }
 
 DelaunayUtilityPlugin::~DelaunayUtilityPlugin()
-{
+{ }
 
-}
-
-void DelaunayUtilityPlugin::BeginEditParams(Interface* ip,IUtil* iu) 
+void DelaunayUtilityPlugin::BeginEditParams(Interface* /*ip*/,IUtil* iu) 
 {
 	this->iu = iu;
-	hPanel = ip->AddRollupPage(
+	/*hPanel = ip->AddRollupPage(
 		hInstance,
 		MAKEINTRESOURCE(IDD_PANEL),
 		DlgProc,
 		GetString(IDS_PARAMS),
-		0);
+		0);*/	// there is no need for the rollup as it has no functionality now
 }
 	
-void DelaunayUtilityPlugin::EndEditParams(Interface* ip,IUtil*)
+void DelaunayUtilityPlugin::EndEditParams(Interface* /*ip*/,IUtil*)
 {
 	this->iu = nullptr;
-	ip->DeleteRollupPage(hPanel);
+	//ip->DeleteRollupPage(hPanel);
 	hPanel = nullptr;
 }
 
@@ -177,7 +187,7 @@ INT_PTR CALLBACK DelaunayUtilityPlugin::DlgProc(HWND hWnd, UINT msg, WPARAM wPar
 			break;
 
 		case WM_COMMAND:
-			#pragma message(TODO("React to the user interface commands.  A utility plug-in is controlled by the user from here."))
+			//#pragma message(TODO("React to the user interface commands.  A utility plug-in is controlled by the user from here."))
 			break;
 
 		case WM_LBUTTONDOWN:

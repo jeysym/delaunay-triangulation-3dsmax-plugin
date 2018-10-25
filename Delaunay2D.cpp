@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Delaunay2D.h"
+#include "Common.h"
 
 using Eigen::Vector3d;
 using Eigen::Vector2d;
@@ -49,56 +50,6 @@ namespace delaunay {
 			return (lhs.m_v1 < rhs.m_v1);
 
 		return false;
-	}
-
-
-	// HELPER FUNCTIONS
-	// ================
-
-	/// Iterates over a collection and performs a functor for each element that does not repeat.
-	template<typename I, typename F>
-	void for_each_nonrepeating(I begin, I end, F func) {
-		auto it = begin;
-		while (it != end) {
-			auto next = it + 1;
-
-			if (next == end) {
-				func(*it);
-				return;
-			}
-			else if (*it != *next) {
-				func(*it);
-				++it;
-			}
-			else {
-				while (*it == *next)
-					++it;
-			}
-		}
-	}
-	
-	inline static double square(double value) {
-		return value * value;
-	}
-
-	inline static double squareSum(const Vector2d & vector) {
-		return (square(vector.x()) + square(vector.y()));
-	}
-
-	inline static double squareSum(const Vector3d & vector) {
-		return (square(vector.x()) + square(vector.y()) + square(vector.z()));
-	}
-
-	inline static bool compareVectorByXCoord(const Vector3d & v0, const Vector3d & v1) {
-		return v0.x() < v1.x();
-	}
-
-	inline static Vector2d toVector2d(const Vector3d & vec) {
-		return Vector2d(vec.x(), vec.y());
-	}
-
-	inline static Point3 toPoint3(const Vector3d & vec) {
-		return Point3(vec.x(), vec.y(), vec.z());
 	}
 
 

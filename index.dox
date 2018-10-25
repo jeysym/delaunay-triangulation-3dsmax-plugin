@@ -1,0 +1,12 @@
+/// \mainpage This project contains 3ds Max utility plugin that provides the user capability to compute
+/// 2D and 3D delaunay triangulation. It can be invoked through the MAXScript interface. 
+/// 
+/// The MAXScript functions must be provided a Mesh instance which contains the vertices to be triangulated.
+/// It returns back a Mesh instance that contains the triangulation. The syntax looks like this:
+///
+/// myMesh = DelaunayUtilityPlugin.delaunay2D $EditableMesh_001.mesh 
+///
+/// myMesh = DelaunayUtilityPlugin.delaunay3D $EditableMesh_001.mesh 
+///
+/// In case of 3D delaunay triangulation the resulting mesh contains each tetrahedron as a single element of the mesh. 
+
