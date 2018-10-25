@@ -151,7 +151,7 @@ namespace delaunay {
 		matrix.row(1) = 2.0 * (vec0 - vec2);
 
 		Vector2d rhs;
-		rhs(0) = squareSum(vec0) - squareSum(vec1), 
+		rhs(0) = squareSum(vec0) - squareSum(vec1);
 		rhs(1) = squareSum(vec0) - squareSum(vec2);
 
 		Vector2d circumCenter = matrix.fullPivLu().solve(rhs);
@@ -196,8 +196,17 @@ namespace delaunay {
 			return false;
 	}
 
+
+	// BOWYER WATSON ALGORITHM IMPLEMENTATION
+	// ======================================
+
 	void BowyerWatson2D::makeBoundingTriangles(const vertexCollection & vertices)
 	{
+		// This function does this:
+		// * Finds the bounding box of the input vertices.
+		// * Enlarges the bounding box as it may play a role in some edge cases.
+		// * Construct a valid 2D delaunay triangulation of this box.
+
 		double xMin = std::numeric_limits<double>::max();
 		double xMax = std::numeric_limits<double>::lowest();
 		double yMin = std::numeric_limits<double>::max();
@@ -320,14 +329,14 @@ namespace delaunay {
 				Triangle & triangle = m_currentTriangulation[iTriangle];
 
 				if (triangle.containsInCircumCircle(vertex2D)) {
-					// triangle is bad, it must be cut out
+					// Triangle is bad, it must be cut out.
 					triangle.m_isBad = true;
 					auto triangleEdges = triangle.getEdges(*this);
 					badEdges.insert(badEdges.end(), triangleEdges.begin(), triangleEdges.end());
 				}
 			}
 
-			// simply remove all the bad triangles
+			// Simply remove all the bad triangles.
 			m_currentTriangulation.erase(
 				std::remove_if(
 					m_currentTriangulation.begin(),
@@ -337,8 +346,8 @@ namespace delaunay {
 				m_currentTriangulation.end()
 			);
 
-			// construct the polygon that forms the boundary of the bad triangles
-			// and create new triangles from this polygon
+			// Construct the polygon that forms the boundary of the bad triangles
+			// and create new triangles from this polygon.
 			std::sort(badEdges.begin(), badEdges.end());
 			for_each_nonrepeating(
 				badEdges.begin(), 

@@ -29,6 +29,7 @@
 #include <tuple>			// tuple
 #include <map>
 #include <set>
+#include <array>
 
 
 // Other includes

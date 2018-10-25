@@ -64,6 +64,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="3dsmaxsdk_preinclude.h" />
+    <ClInclude Include="Common.h" />
     <ClInclude Include="Delaunay2D.h" />
     <ClInclude Include="Delaunay3D.h" />
     <ClInclude Include="DelaunayUtilityPlugin.h" />

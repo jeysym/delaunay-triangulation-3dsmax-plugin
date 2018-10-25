@@ -62,6 +62,9 @@
     <ClInclude Include="Delaunay2D.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Common.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="DelaunayUtilityPlugin.rc">
