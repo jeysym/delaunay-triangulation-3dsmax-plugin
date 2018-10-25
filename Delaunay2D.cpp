@@ -147,18 +147,16 @@ namespace delaunay {
 		//		This can be solved by the standard linear algebra methods.
 
 		Matrix2d matrix;
-		matrix <<
-			2.0 * (vec0 - vec1),
-			2.0 * (vec0 - vec2);
-		matrix.transposeInPlace();
+		matrix.row(0) = 2.0 * (vec0 - vec1);
+		matrix.row(1) = 2.0 * (vec0 - vec2);
 
 		Vector2d rhs;
-		rhs <<
-			squareSum(vec0) - squareSum(vec1), squareSum(vec0) - squareSum(vec2);
+		rhs(0) = squareSum(vec0) - squareSum(vec1), 
+		rhs(1) = squareSum(vec0) - squareSum(vec2);
 
 		Vector2d circumCenter = matrix.fullPivLu().solve(rhs);
-		Vector2d x = vec0 - circumCenter;
-		double circumRadiusSquared = squareSum(x);
+		Vector2d vec0d = vec0 - circumCenter;
+		double circumRadiusSquared = squareSum(vec0d);
 
 		m_circumCenter = circumCenter;
 		m_circumRadiusSquared = circumRadiusSquared;
@@ -286,6 +284,7 @@ namespace delaunay {
 			++iFace;
 		}
 
+		result->InvalidateGeomCache();
 		return result;
 	}
 
