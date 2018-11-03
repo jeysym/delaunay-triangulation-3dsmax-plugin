@@ -40,3 +40,8 @@ Author
 ------
 
 Created by Jeysym in 2018.
+
+License
+-------
+
+This project is licensed under MIT licnse (see LICENSE file).
