@@ -1,0 +1,20 @@
+###########################################################################################
+# These are the MAXScript commands used to create the objects in the example .max file.
+###########################################################################################
+
+Welcome to MAXScript.
+
+myMesh = DelaunayUtilityPlugin.delaunay2D $Data2D_1.mesh
+TriMesh
+$Tri2D_1.mesh = myMesh
+TriMesh
+
+myMesh = DelaunayUtilityPlugin.delaunay2D $Data2D_2.mesh
+TriMesh
+$Tri2D_2.mesh = myMesh
+TriMesh
+
+myMesh = DelaunayUtilityPlugin.delaunay3D $Data3D_1.mesh
+TriMesh
+$Tri3D_1.mesh = myMesh
+TriMesh
