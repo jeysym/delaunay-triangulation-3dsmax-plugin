@@ -6,6 +6,9 @@ About
 
 This project is a 3ds Max plugin written in C++ that gives the user the ability to compute 2D and 3D [Delaunay triangulation](https://en.wikipedia.org/wiki/Delaunay_triangulation) (through MAXScript interface). Both triangulation algorithms take a set of 2D (3D) points as an input. The 2D (3D) triangulation covers the convex hull of this set with triangles (tetrahedrons). To achieve the triangulation the [Bowyer-Watson](https://en.wikipedia.org/wiki/Bowyer%E2%80%93Watson_algorithm) algorithm is used.
 
+
+![2d example](example2D.png)
+
 Building the project
 --------------------
 
